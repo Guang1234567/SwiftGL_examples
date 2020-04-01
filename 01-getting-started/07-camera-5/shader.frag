@@ -12,5 +12,5 @@ void main()
     // using alpha channel from second texture
     vec4 tex1 = texture(ourTexture1, TexCoord);
     vec4 tex2 = texture(ourTexture2, TexCoord);
-    color = vec4(mix(tex1.xyz, tex2.xyz, tex2.w), 1.0f);
+    color = mix(tex1, tex2, 0.2);
 }
