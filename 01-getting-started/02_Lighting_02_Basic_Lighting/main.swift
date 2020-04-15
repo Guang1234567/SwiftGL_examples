@@ -35,7 +35,7 @@ var deltaTime = GLfloat(0.0)  // Time between current frame and last frame
 var lastFrame = GLfloat(0.0)  // Time of last frame
 
 
-var lightPos: vec3 = [2.0, 1.0, 2.0]
+var lightPos: vec3 = [2.0, 0.0, 2.0]
 
 
 func keyCallback(window: OpaquePointer!, key: Int32, scancode: Int32, action: Int32, mode: Int32) {
@@ -150,9 +150,10 @@ func main() {
     glfwSetScrollCallback(window, scrollCallback)
 
     // GLFW Options
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED)
 
     let objectShader = Shader(vertexFile: "object_shader.vs", fragmentFile: "object_shader.frag")
+    let objectGouraudShader = Shader(vertexFile: "object_shader_gouraud.vs", fragmentFile: "object_shader_gouraud.frag")
     let lampShader = Shader(vertexFile: "lamp_shader.vs", fragmentFile: "lamp_shader.frag")
 
     // Define the viewport dimensions
@@ -215,11 +216,35 @@ func main() {
             texture2DDescriptions: tds,
             shaderDescription: objectSds
     ));
-    //objectCubeWidget.moveTo(x: 1.2, y: 1.0, z: 2.0)
+    objectCubeWidget.moveTo(x: -1, y: 0.0, z: 0.0)
+
+    let object2Sds: ShaderDescription = ShaderDescription(
+            shader: objectGouraudShader,
+            actions: [
+                {
+                    $0.setVec3(name: "objectColor", x: 1.0, y: 0.5, z: 0.31)
+                    //var coral: vec3 = vec3(1.0, 0.5, 0.31)
+                    //$0.setVec3(name: "objectColor", value: &coral)
+                    $0.setVec3(name: "lightColor", x: 1.0, y: 1.0, z: 1.0)
+
+                    var currentLampPos = lampCubeWidget.xyz
+                    $0.setVec3(name: "lightPos", value: &currentLampPos);
+                    $0.setVec3(name: "viewPos", value: &cameraPos)
+                }
+            ]
+    )
+    //let objectCubeWidget2 = objectCubeWidget.clone()
+    let objectCubeWidget2 = ObjectCubeWidget(renderObject: RenderObject(
+            vbo: vbo,
+            texture2DDescriptions: tds,
+            shaderDescription: object2Sds
+    ));
+    objectCubeWidget2.moveTo(x: -objectCubeWidget.x, y: objectCubeWidget.y, z: objectCubeWidget.z)
 
     var cubeWidgets: [BaseWidget] = []
     cubeWidgets.append(lampCubeWidget)
     cubeWidgets.append(objectCubeWidget)
+    cubeWidgets.append(objectCubeWidget2)
 
     // Setup OpenGL options
     glEnable(GL_DEPTH_TEST)
@@ -243,9 +268,15 @@ func main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         // Create transformations
+        let model = mat4()
         var view = SGLMath.lookAt(cameraPos, cameraPos + cameraFront, cameraUp)
         let aspectRatio = GLfloat(WIDTH) / GLfloat(HEIGHT)
         var projection = SGLMath.perspective(radians(fov), aspectRatio, 0.1, 100.0)
+
+        objectGouraudShader.use()
+        objectGouraudShader.setMat4(name: "view", transpose: false, value: &view)
+        objectGouraudShader.setMat4(name: "projection", transpose: false, value: &projection)
+
         objectShader.use()
         objectShader.setMat4(name: "view", transpose: false, value: &view)
         objectShader.setMat4(name: "projection", transpose: false, value: &projection)
@@ -253,7 +284,6 @@ func main() {
         lampShader.use()
         lampShader.setMat4(name: "view", transpose: false, value: &view)
         lampShader.setMat4(name: "projection", transpose: false, value: &projection)
-        let model = mat4()
 
         let radius: GLfloat = 2.0;
         let lampX: GLfloat = sin(currentFrame) * radius;
@@ -262,8 +292,8 @@ func main() {
 
         // Draw container
         for (index, cubeWidget) in cubeWidgets.enumerated() {
-            let angle = GLfloat(index * 20) * deltaTime
-            cubeWidget.rotateBy(degree: angle, centerAxis: vec3(1.0, 0.3, 0.5))
+            let angle = GLfloat(index * 10) * deltaTime
+            //cubeWidget.rotateBy(degree: index % 2 == 0 ? -angle : angle, centerAxis: vec3(1.0, 0.3, 0.5))
             cubeWidget.draw(parentModel: model)
         }
 
